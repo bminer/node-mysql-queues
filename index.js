@@ -29,6 +29,9 @@ module.exports = function(db) {
 			}
 		});
 	}
+	db.startTransaction = function() {
+		return Queue.isNowTransaction(this.createQueue() );
+	}
 }
 function Queue(dbQuery, resumeMainQueue) {
 	this.queue = [];
@@ -72,7 +75,12 @@ function Queue(dbQuery, resumeMainQueue) {
 							/* The query's callback may have queued more queries on this Queue.
 								If so, execute this Queue again; otherwise, resumeMainQueue() */
 							if(that.queue.length == 0)
+							{
+								//If this is a transaction that has not yet been committed, commit it!
+								if(that.commit != null)
+									that.commit();
 								resumeMainQueue();
+							}
 							else
 								that.execute();
 						}
@@ -84,4 +92,20 @@ function Queue(dbQuery, resumeMainQueue) {
 			//console.log("Queue Complete:", currentlyExecutingQueue);
 		}
 	};
+}
+Queue.isNowTransaction = function(q) {
+	q.query("START TRANSACTION");
+	q.commit = function(cb) {
+		this.query("COMMIT", cb);
+		delete this.commit;
+		delete this.rollback;
+		this.execute();
+	}
+	q.rollback = function(cb) {
+		this.query("ROLLBACK", cb);
+		delete this.commit;
+		delete this.rollback;
+		this.execute();
+	}
+	return q;
 }
