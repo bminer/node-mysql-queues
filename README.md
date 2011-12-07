@@ -25,6 +25,23 @@ q.query(...);
 q.execute();
 
 client.query(...); //Will not execute until all queued queries completed.
+
+//Now you want a transaction?
+var trans = client.startTransaction();
+trans.query("INSERT...", [x, y, z], function(err, info) {
+	if(err)
+		trans.rollback();
+	else
+		trans.query("UPDATE...", [a, b, c, info.insertId], function(err) {
+			if(err)
+				trans.rollback();
+			else
+				trans.commit();
+		});
+});
+trans.execute();
+//No other queries will get executed until the transaction completes
+client.query("SELECT ...") //This won't execute until the transaction is COMPLETELY done (including callbacks)
 ```
 
 ## API
