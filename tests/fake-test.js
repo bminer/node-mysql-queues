@@ -1,4 +1,6 @@
 var queue = require('../server/lib/mysql-query-queue');
+
+//Create a fake MySQL client
 var db = {
 	'query': function(sql, input, cb) {
 		if(typeof input == "function")
@@ -7,14 +9,15 @@ var db = {
 			input = undefined;
 		}
 		console.log("Executing " + sql);
+		//Simulate a database delay of 1 second
 		setTimeout(function() {
 			console.log("-------------" + sql + " CB");
 			if(cb != null) cb();
 		}, 1000);
 	}
 };
-//Enable queuing
-queue(db);
+
+queue(db); //Enable queuing
 
 db.query("1");
 db.query("2", function() {
@@ -47,7 +50,7 @@ db.query("3B");
 q1.execute();
 db.query("4");
 
-//Should do nothing
+//Should do nothing since queue is empty
 q1.execute();
 q1.execute();
 q1.execute();

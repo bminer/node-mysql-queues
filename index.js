@@ -67,6 +67,7 @@ function Queue(dbQuery, resumeMainQueue) {
 				(function(item) {
 					//Execute the query
 					dbQuery(item.sql, item.input || [], function() {
+						//Execute the original callback first (which may add more queries to this Queue)
 						if(item.cb != null)
 							item.cb.apply(this, arguments);
 						//When the entire queue has completed...
@@ -76,7 +77,7 @@ function Queue(dbQuery, resumeMainQueue) {
 								If so, execute this Queue again; otherwise, resumeMainQueue() */
 							if(that.queue.length == 0)
 							{
-								//If this is a transaction that has not yet been committed, commit it!
+								//If this is a transaction that has not yet been committed, commit it
 								if(that.commit != null)
 									that.commit();
 								resumeMainQueue();

@@ -74,23 +74,29 @@ execution of this query Queue, all queries executed using `client.query` will
 be queued until this Queue is empty and all callbacks of this Queue have
 finished executing. That means that a query added to a Queue can also queue
 a query using `Queue.query`, and it will be executed before any `client.query`
-call. Thus, nested query queueing is supported in query callbacks, allowing support
-for transactions and more. See the source code for further documentation.
+call. Thus, nested query queueing is supported in query callbacks, allowing
+support for transactions and more.
+See the source code for further documentation.
+
+Note: Once `execute()` is called and all queries have completed, the Queue
+will be empty again. You may continue to use `Queue.query` and `Queue.execute`
+to queue and execute more queries. However, as noted below, you should
+*never* reuse a Queue created by `client.startTransaction`
 
 #### `Queue.commit()`
 
-Available only if this Queue is a transaction. This queues 'COMMIT' and calls `execute()`
-Once you call commit() on this Queue, you should discard it.
+Available only if this Queue was created with `client.startTransaction`.
+This queues 'COMMIT' and calls `execute()`
+You should call either `commit()` or `rollback()` exactly once. Once you call
+`commit()` on this Queue, you should discard it.
 
-Note: if the Queue has already been released, this method throws an Exception.
-A released Queue is one that has already been executed AND all callbacks have completed.
-Normally, released Queues can be re-used, but transactions cannot be re-used.
-
-In addition, release transaction Queues call commit() by default to end the transaction; however, this behavior SHOULD NOT be relied upon.
+If you do not call `commit()` or `rollback()` and the Queue has completed
+execution, `commit()` will be called automatically; however, one should
+**NOT** rely on this behavior.
 
 #### `Queue.rollback()`
 
-Available only if this Queue is a transaction. This queues 'ROLLBACK' and calls `execute()`
-Once you call rollback() on this Queue, you should discard it.
-
-Note: if the Queue has already been released, this method throws an Exception.
+Available only if this Queue was created with `client.startTransaction`.
+This queues 'ROLLBACK' and calls `execute()`
+You should call either `commit()` or `rollback()` exactly once. Once you call
+`rollback()` on this Queue, you should discard it.
