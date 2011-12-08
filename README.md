@@ -4,6 +4,10 @@ Add your own node-mysql query queues to support transactions and multiple statem
 
 For use with Node.JS and node-mysql: https://github.com/felixge/node-mysql
 
+## Install
+
+`npm install mysql-queues`
+
 ## Usage
 
 ```javascript
