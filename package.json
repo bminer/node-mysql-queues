@@ -2,7 +2,7 @@
   "author": "Blake Miner <miner.blake@gmail.com> (http://www.blakeminer.com)",
   "name": "mysql-queues",
   "description": "Wraps 'mysql' to provide mulitple query queues, allowing support for multiple statements and transactions.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "homepage": "https://github.com/bminer/node-mysql-queues",
   "repository": {
     "type": "git",

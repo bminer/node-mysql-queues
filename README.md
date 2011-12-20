@@ -96,7 +96,9 @@ You should call either `commit()` or `rollback()` exactly once. Once you call
 
 If you do not call `commit()` or `rollback()` and the Queue has completed
 execution, `commit()` will be called automatically; however, one should
-**NOT** rely on this behavior.
+**NOT** rely on this behavior. In fact, mysql-queues will print nasty
+warning messages and a stack trace if you do not explicitly `commit()` or
+`rollback()` a transaction.
 
 #### `Queue.rollback()`
 
