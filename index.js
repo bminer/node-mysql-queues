@@ -7,7 +7,7 @@ module.exports = function(db) {
 	db.query = function(sql, params, cb) {
 		//Run query if no Queue is running; otherwise, queue it in mainQueue
 		if(currentlyExecutingQueue == null)
-			dbQuery.apply(db, arguments);
+			return dbQuery.apply(db, arguments);
 		else
 			mainQueue.push(arguments);
 	}
@@ -47,6 +47,7 @@ function Queue(dbQuery, resumeMainQueue) {
 			'params': params,
 			'cb': cb
 		});
+		return this; //Chaining :)
 	};
 	/* Execute all queries on the Queue in order and prevent other queries from executing until
 		all queries have been completed.
@@ -79,7 +80,15 @@ function Queue(dbQuery, resumeMainQueue) {
 							{
 								//If this is a transaction that has not yet been committed, commit it
 								if(that.commit != null)
+								{
+									//Also, warn the user that relying on this behavior is a bad idea
+									console.warn("WARNING: mysql-queues: Database transaction was " +
+										"implicitly committed.\nIt is HIGHLY recommended that you " +
+										"explicitly commit all transactions.\n" +
+										"I'm printing a stack trace to help you fix the problem:");
+									console.trace();
 									that.commit();
+								}
 								resumeMainQueue();
 							}
 							else
@@ -92,6 +101,7 @@ function Queue(dbQuery, resumeMainQueue) {
 			//All queued queries are running, but we don't resume the main queue just yet
 			//console.log("Queue Complete:", currentlyExecutingQueue);
 		}
+		return this; //Chaining :)
 	};
 }
 Queue.isNowTransaction = function(q) {
