@@ -108,7 +108,7 @@ This queues 'ROLLBACK' and calls `execute()`
 You should call either `commit()` or `rollback()` exactly once. Once you call
 `rollback()` on this Queue, you should discard it.
 
-### `require('mysql-queues')(client, debug)
+### `require('mysql-queues')(client, debug)`
 
 Attaches mysql-queues to the mysql client. When `debug` mode is enabled,
 debugging messages are printed to standard error when certain exceptions occur.
