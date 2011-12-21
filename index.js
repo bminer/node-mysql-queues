@@ -1,7 +1,9 @@
 var currentlyExecutingQueue = null;
 var mainQueue = [];
 /* Wraps db.query and exposes function db.createQueue() */
-module.exports = function(db) {
+module.exports = function(db, debug) {
+	if(debug !== true) debug = false;
+	if(debug) console.log("mysql-queues: debug mode enabled.");
 	var dbQuery = db.query; //The old db.query function
 	//Wrap db.query
 	db.query = function(sql, params, cb) {
@@ -13,7 +15,7 @@ module.exports = function(db) {
 	}
 	//Create a new executable query Queue
 	db.createQueue = function() {
-		return new Queue(dbQuery, function () {
+		return new Queue(function() {return dbQuery.apply(db, arguments);},	function () {
 			//Called when a Queue has completed its processing and main queue should be executed
 			currentlyExecutingQueue = null;
 			while(mainQueue.length > 0)
@@ -27,13 +29,13 @@ module.exports = function(db) {
 				else
 					dbQuery.apply(db, item);
 			}
-		});
+		}, debug);
 	}
 	db.startTransaction = function() {
 		return Queue.isNowTransaction(this.createQueue() );
 	}
 }
-function Queue(dbQuery, resumeMainQueue) {
+function Queue(dbQuery, resumeMainQueue, debug) {
 	this.queue = [];
 	/* Add a query to the Queue */
 	this.query = function(sql, params, cb) {
@@ -67,34 +69,43 @@ function Queue(dbQuery, resumeMainQueue) {
 			{
 				(function(item) {
 					//Execute the query
-					dbQuery(item.sql, item.input || [], function() {
-						//Execute the original callback first (which may add more queries to this Queue)
-						if(item.cb != null)
-							item.cb.apply(this, arguments);
-						//When the entire queue has completed...
-						if(++done == total)
-						{
-							/* The query's callback may have queued more queries on this Queue.
-								If so, execute this Queue again; otherwise, resumeMainQueue() */
-							if(that.queue.length == 0)
+					try {
+						dbQuery(item.sql, item.params || [], function() {
+							if(debug && arguments[0] != null)
+								console.error("mysql-queues: An error occurred while executing the following " +
+									"query:\n\t", item.sql);
+							//Execute the original callback first (which may add more queries to this Queue)
+							if(item.cb != null)
+								item.cb.apply(this, arguments);
+							//When the entire queue has completed...
+							if(++done == total)
 							{
-								//If this is a transaction that has not yet been committed, commit it
-								if(that.commit != null)
+								/* The query's callback may have queued more queries on this Queue.
+									If so, execute this Queue again; otherwise, resumeMainQueue() */
+								if(that.queue.length == 0)
 								{
-									//Also, warn the user that relying on this behavior is a bad idea
-									console.warn("WARNING: mysql-queues: Database transaction was " +
-										"implicitly committed.\nIt is HIGHLY recommended that you " +
-										"explicitly commit all transactions.\n" +
-										"I'm printing a stack trace to help you fix the problem:");
-									console.trace();
-									that.commit();
+									//If this is a transaction that has not yet been committed, commit it
+									if(that.commit != null)
+									{
+										//Also, warn the user that relying on this behavior is a bad idea
+										console.warn("WARNING: mysql-queues: Database transaction was " +
+											"implicitly committed.\nIt is HIGHLY recommended that you " +
+											"explicitly commit all transactions.\n" +
+											"The last query to run was:", item.sql);
+										that.commit();
+									}
+									resumeMainQueue();
 								}
-								resumeMainQueue();
+								else
+									that.execute();
 							}
-							else
-								that.execute();
-						}
-					});
+						});
+					} catch(e) {
+						if(debug)
+							console.log("mysql-queues: An exception occurred for this query:\n\t",
+								item.sql, "\twith parameters:\n\t", item.params);
+						throw e;
+					}
 				})(that.queue[i]);
 			}
 			that.queue = [];

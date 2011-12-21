@@ -18,7 +18,8 @@ var client = mysql.createClient({
 });
 //Enable mysql-queues
 var queues = require('mysql-queues');
-queues(client);
+const DEBUG = true;
+queues(client, DEBUG);
 //Start running queries as normal...
 client.query(...);
 
@@ -97,8 +98,8 @@ You should call either `commit()` or `rollback()` exactly once. Once you call
 If you do not call `commit()` or `rollback()` and the Queue has completed
 execution, `commit()` will be called automatically; however, one should
 **NOT** rely on this behavior. In fact, mysql-queues will print nasty
-warning messages and a stack trace if you do not explicitly `commit()` or
-`rollback()` a transaction.
+warning messages if you do not explicitly `commit()` or `rollback()` a
+transaction.
 
 #### `Queue.rollback()`
 
@@ -106,3 +107,11 @@ Available only if this Queue was created with `client.startTransaction`.
 This queues 'ROLLBACK' and calls `execute()`
 You should call either `commit()` or `rollback()` exactly once. Once you call
 `rollback()` on this Queue, you should discard it.
+
+### `require('mysql-queues')(client, debug)
+
+Attaches mysql-queues to the mysql client. When `debug` mode is enabled,
+debugging messages are printed to standard error when certain exceptions occur.
+When you queue a query, the call stack becomes somewhat useless, and it can
+become difficult to determine which query is causing a problem. The debug
+feature allows you to more easily determine which query that caused a problem.
