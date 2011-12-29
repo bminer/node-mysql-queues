@@ -155,7 +155,7 @@ This executes 'ROLLBACK' immediately and purges the remaining queries in the
 queue.
 
 You may only call `rollback()` once. To avoid calling it twice, you can
-check to see if it exists; once you call rollback(), the function is
+check to see if it exists; once you call `rollback()`, the function is
 deleted from the Queue object.
 
 Note: Before 0.2.3, `rollback()` would add the 'ROLLBACK' query to the Queue
@@ -228,10 +228,10 @@ query to another database will cause this problem (i.e. if you execute a
 series of MySQL queries and then update Redis, for example)
 
 Possible workarounds include:
- - Using synchronous I/O operations (i.e. readFileSync in this case)
- - Performing your asynchronous operation BEFORE you execute any queued
+ * Using synchronous I/O operations (i.e. readFileSync in this case)
+ * Performing your asynchronous operation BEFORE you execute any queued
  queries (i.e. we could have read "foobar.txt" first, then executed the query.
- - Call `Queue.pause()` right before the asynchrous operation. This is the
+ * Call `Queue.pause()` right before the asynchrous operation. This is the
  easy way out, but it comes at a cost. If you pause a Queue, no query
  can be executed during the asynchronous operation. In other words, if
  you can avoid `Queue.pause()`, you should do so.
