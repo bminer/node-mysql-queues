@@ -118,7 +118,6 @@ As of version 0.3.0, the behavior of `commit()` is:
 
  * If the queue is empty when `commit()` is called, then 'COMMIT' will be
  executed immediately, even if the Queue is paused.
-
  * If the queue is not empty when `commit()` is called, then Queue will be
  resumed / executed. Then, 'COMMIT' will be queued for execution.
 
@@ -228,6 +227,7 @@ query to another database will cause this problem (i.e. if you execute a
 series of MySQL queries and then update Redis, for example)
 
 Possible workarounds include:
+
  * Using synchronous I/O operations (i.e. readFileSync in this case)
  * Performing your asynchronous operation BEFORE you execute any queued
  queries (i.e. we could have read "foobar.txt" first, then executed the query.
