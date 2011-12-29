@@ -182,7 +182,7 @@ which will prevent the Queue from pausing for too long.
 Pausing a Queue is useful to make additional asynchronous calls within a
 query callback. An example of this is shown below.
 
-#### Queue.resume
+#### Queue.resume()
 
 Resumes Queue execution. This function basically unpauses the Queue and
 calls `execute()`.
