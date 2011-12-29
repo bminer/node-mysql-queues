@@ -157,7 +157,6 @@ Queue.isNowTransaction = function(q, dbQuery) {
 		this.queue = [];
 		delete this.commit;
 		delete this.rollback;
-		this.rolledback = true;
 		dbQuery("ROLLBACK", cb);
 		this.resume();
 	}

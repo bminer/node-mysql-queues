@@ -125,7 +125,7 @@ As of version 0.3.0, the behavior of `commit()` is:
 You may only call `commit()` once. Once you call `commit()` on this Queue,
 you should discard it. To avoid calling `commit()` twice, you can check
 to see if it exists; once you call `commit()`, the function is deleted
-from the Queue.
+from the Queue object.
 
 As of version 0.3.0, it is sometimes
 possible to call `rollback()` even after `commit()` has been called.
@@ -137,10 +137,10 @@ callbacks to call `rollback()` if an error occurred (i.e. a foreign key
 constraint was violated). If no error occurs, you want to call `commit()`.
 Rather than nesting all of these queries to determine whether or not to
 call `commit()` or `rollback()`, you can simply queue up all of your queries,
-call `commit()` to queue it up, and execute `rollback()` if your query
-callbacks if an error occurs.
+call `commit()` to queue up a 'COMMIT', and call `rollback()` in your
+query callbacks if an error occurs.
 
-#### Important Note!
+### Important Note!
 
 If you do not call `commit()` or `rollback()` and the Queue has completed
 execution, `commit()` will be called automatically; however, one should
@@ -155,8 +155,8 @@ This executes 'ROLLBACK' immediately and purges the remaining queries in the
 queue.
 
 You may only call `rollback()` once. To avoid calling it twice, you can
-check the `Queue.rolledback` flag to see if the transaction has already
-been rolled back.
+check to see if it exists; once you call rollback(), the function is
+deleted from the Queue object.
 
 Note: Before 0.2.3, `rollback()` would add the 'ROLLBACK' query to the Queue
 and the Queue would continue executing. This was changed in 0.2.3 because it
@@ -165,12 +165,6 @@ it will be rolled back anyway. As mentioned above, this also allows you to
 queue the COMMIT query at the bottom of the queue, and if an error occurs
 before the COMMIT, you can safely `rollback()` the entire transaction.
 
-#### Queue.rolledback
-
-Set to `true` if and only if `rollback()` has been called on this Queue.
-If `rollback()` has not be called, the value will be non-true (undefined,
-false, etc.).
-
 #### Queue.pause([maxWaitDuration])
 
 Pauses the Queue, preventing it from returning control to the next Queue or
@@ -178,12 +172,12 @@ to the main node-mysql Queue. You can call `resume()` to resume the Queue,
 or if the Queue is a transaction, `commit()` or `rollback()` will
 automatically resume the Queue.
 
-By default, the Queue will remain paused until you call `resume()`; however
-you may set an optional maximum wait duration, which will prevent the Queue
-from pausing for too long.
+By default, the Queue will remain paused until you call `resume()` or end
+the transaction; however, you may set an optional maximum wait duration,
+which will prevent the Queue from pausing for too long.
 
 *CAUTION:* A paused Queue will block all queries for this connection.
-Use with care.
+*Use with care.*
 
 Pausing a Queue is useful to make additional asynchronous calls within a
 query callback. An example of this is shown below.
@@ -191,7 +185,7 @@ query callback. An example of this is shown below.
 #### Queue.resume
 
 Resumes Queue execution. This function basically unpauses the Queue and
-calls `execute()`
+calls `execute()`.
 
 ### require('mysql-queues')(client, debug)
 
@@ -225,15 +219,19 @@ This won't work as expected. The query callback completes and automatically
 executes `commit()` before the asychronous filesystem call completes. In this
 example, you will get a warning message, your transaction will be committed
 no matter what, and your program may throw an exception after the I/O
-operation completes (because neither `commit()` or `rollback()` can be
+operation completes (because neither `commit()` nor `rollback()` can be
 called more than once).
 
-To be clear, this problem is limited by aynchronous file I/O operations; even
-a query to another database will cause this problem (i.e. if you execute a
+To be clear, the scope of this problem is *not* limited by asynchronous
+file I/O operations; any asychronous call can cause this problem - even a
+query to another database will cause this problem (i.e. if you execute a
 series of MySQL queries and then update Redis, for example)
 
 Possible workarounds include:
  - Using synchronous I/O operations (i.e. readFileSync in this case)
  - Performing your asynchronous operation BEFORE you execute any queued
- queries.
- - Call `Queue.pause()` right before the asynchrous operation
+ queries (i.e. we could have read "foobar.txt" first, then executed the query.
+ - Call `Queue.pause()` right before the asynchrous operation. This is the
+ easy way out, but it comes at a cost. If you pause a Queue, no query
+ can be executed during the asynchronous operation. In other words, if
+ you can avoid `Queue.pause()`, you should do so.
