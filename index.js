@@ -16,8 +16,21 @@ module.exports = function(db, debug) {
 	//Create a new executable query Queue
 	db.createQueue = function() {
 		return new Queue(function() {return dbQuery.apply(db, arguments);},	function () {
-			//Called when a Queue has completed its processing and main queue should be executed
+			console.log("Resume main queue");
+			//If the current Queue is a transaction that has not yet been committed, commit it
+			var ceq = currentlyExecutingQueue;
+			if(ceq != null && ceq.commit != null)
+			{
+				//Also, warn the user that relying on this behavior is a bad idea
+				console.warn("WARNING: mysql-queues: Database transaction was " +
+					"implicitly committed.\nIt is HIGHLY recommended that you " +
+					"explicitly commit all transactions.\n" +
+					"The last query to run was:", ceq.lastExecuted.sql);
+				ceq.commit();
+				return;
+			}
 			currentlyExecutingQueue = null;
+			//Called when a Queue has completed its processing and main queue should be executed
 			while(mainQueue.length > 0)
 			{
 				var item = mainQueue.shift(); //Unsure of shift's performance
@@ -37,6 +50,7 @@ module.exports = function(db, debug) {
 }
 function Queue(dbQuery, resumeMainQueue, debug) {
 	this.queue = [];
+	this.paused = false;
 	/* Add a query to the Queue */
 	this.query = function(sql, params, cb) {
 		if(typeof params == "function")
@@ -55,6 +69,7 @@ function Queue(dbQuery, resumeMainQueue, debug) {
 		all queries have been completed.
 	*/
 	this.execute = function() {
+		if(this.paused === true) return this;
 		var that = this;
 		//If another Queue is currently running, we put this on the mainQueue
 		if(currentlyExecutingQueue != null && currentlyExecutingQueue != this)
@@ -70,6 +85,8 @@ function Queue(dbQuery, resumeMainQueue, debug) {
 				(function(item) {
 					//Execute the query
 					try {
+						if(item.sql == "COMMIT") delete that.rollback; //Keep 'em honest
+						that.lastExecuted = item; //For debugging and convenience
 						dbQuery(item.sql, item.params || [], function() {
 							if(debug && arguments[0] != null)
 								console.error("mysql-queues: An error occurred while executing the following " +
@@ -80,22 +97,11 @@ function Queue(dbQuery, resumeMainQueue, debug) {
 							//When the entire queue has completed...
 							if(++done == total)
 							{
+								if(that.paused === true) return;
 								/* The query's callback may have queued more queries on this Queue.
 									If so, execute this Queue again; otherwise, resumeMainQueue() */
 								if(that.queue.length == 0)
-								{
-									//If this is a transaction that has not yet been committed, commit it
-									if(that.commit != null)
-									{
-										//Also, warn the user that relying on this behavior is a bad idea
-										console.warn("WARNING: mysql-queues: Database transaction was " +
-											"implicitly committed.\nIt is HIGHLY recommended that you " +
-											"explicitly commit all transactions.\n" +
-											"The last query to run was:", item.sql);
-										that.commit();
-									}
 									resumeMainQueue();
-								}
 								else
 									that.execute();
 							}
@@ -107,28 +113,53 @@ function Queue(dbQuery, resumeMainQueue, debug) {
 						throw e;
 					}
 				})(that.queue[i]);
-				if(that.queue.length == 0) return; //A rollback must have occurred!
 			}
 			that.queue = [];
 			//All queued queries are running, but we don't resume the main queue just yet
 			//console.log("Queue Complete:", currentlyExecutingQueue);
 		}
+		else if(currentlyExecutingQueue == this)
+			resumeMainQueue();
 		return this; //Chaining :)
 	};
+	this.pause = function(maxWaitTime) {
+		this.paused = true;
+		if(maxWaitTime > 0)
+		{
+			var that = this;
+			that.pauseTimer = setTimeout(function() {
+				that.resume();
+			}, maxWaitTime);
+		}
+		return this; //Chaining
+	}
+	this.resume = function() {
+		if(this.pauseTimer)
+			clearTimeout(this.pauseTimer);
+		this.paused = false;
+		this.execute();
+		return this; //Chaining
+	}
 }
 Queue.isNowTransaction = function(q, dbQuery) {
 	q.query("START TRANSACTION");
 	q.commit = function(cb) {
-		this.query("COMMIT", cb);
 		delete this.commit;
-		this.execute();
+		if(this.queue.length > 0)
+		{
+			this.resume(); //Execute the Queue to empty it
+			this.query("COMMIT", cb); //Queue COMMIT, but don't execute yet
+		}
+		else
+			this.query("COMMIT", cb).resume();
 	}
 	q.rollback = function(cb) {
 		this.queue = [];
-		dbQuery("ROLLBACK", cb);
 		delete this.commit;
 		delete this.rollback;
-		this.execute();
+		this.rolledback = true;
+		dbQuery("ROLLBACK", cb);
+		this.resume();
 	}
 	return q;
 }

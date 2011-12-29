@@ -1,4 +1,4 @@
-var queue = require('../server/lib/mysql-query-queue');
+var queue = require('../index');
 
 //Create a fake MySQL client
 var db = {

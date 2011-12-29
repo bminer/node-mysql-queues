@@ -4,6 +4,8 @@ Add your own node-mysql query queues to support transactions and multiple statem
 
 For use with Node.JS and node-mysql: https://github.com/felixge/node-mysql
 
+Please note that the 0.2.3 release is buggy and is not recommended for use.
+
 ## Install
 
 `npm install mysql-queues`
@@ -47,9 +49,8 @@ trans.query("INSERT...", [x, y, z], function(err, info) {
 trans.execute();
 //No other queries will get executed until the transaction completes
 client.query("SELECT ...") //This won't execute until the transaction is COMPLETELY done (including callbacks)
-```
 
-//Or... as of version 0.2.3, you can do this...
+//Or... as of version 0.3.0, you can do this...
 var trans = client.startTransaction();
 function error(err) {
 	if(err) {trans.rollback(); throw err;}
@@ -62,7 +63,9 @@ trans.commit();
 entire transaction can be rolled back if an error occurs. Nesting these queries
 was not required. */
 
-//Even multiple Queues work! They get executed in the order that `execute()` is called.
+```
+Even multiple Queues work! They get executed in the order that `execute()` is called.
+
 ## API
 
 #### client.query(sql, [params, cb])
@@ -101,7 +104,7 @@ Calling `execute()` on an already executing Queue has no effect.
 
 Note: Once `execute()` is called and all queries have completed, the Queue
 will be empty again, returning control to either: (a) another Queue that has been
-queued for execution; or (b) the main MySQL queue (a.k.a. queries executed
+queued for execution; or (b) the main node-mysql queue (a.k.a. queries executed
 with `client.query`). Once a Queue is empty and has finished executing, you may
 continue to use `Queue.query` and `Queue.execute` to queue and execute more
 queries; however, as noted below, you should *never* reuse a Queue created by
@@ -110,18 +113,34 @@ queries; however, as noted below, you should *never* reuse a Queue created by
 #### Queue.commit()
 
 Available only if this Queue was created with `client.startTransaction`.
-This queues 'COMMIT' and calls `execute()`.
-You should call either `commit()` or `rollback()` exactly once. Once you call
-`commit()` on this Queue, you should discard it.
 
-As of version 0.2.3, it is now possible to call `rollback()` even after
-`commit()` has been called. In a typical scenario, you want your query
+As of version 0.3.0, the behavior of `commit()` is:
+
+ * If the queue is empty when `commit()` is called, then 'COMMIT' will be
+ executed immediately, even if the Queue is paused.
+
+ * If the queue is not empty when `commit()` is called, then Queue will be
+ resumed / executed. Then, 'COMMIT' will be queued for execution.
+
+You may only call `commit()` once. Once you call `commit()` on this Queue,
+you should discard it. To avoid calling `commit()` twice, you can check
+to see if it exists; once you call `commit()`, the function is deleted
+from the Queue.
+
+As of version 0.3.0, it is sometimes
+possible to call `rollback()` even after `commit()` has been called.
+If 'COMMIT' is queued for execution (i.e. if the queue is *not* empty when
+`commit()` is called), then you may call `rollback()` on this Queue,
+as long as `rollback()` occurs before the 'COMMIT' is executed.
+You might use the functionality in a scenario where you only want your query
 callbacks to call `rollback()` if an error occurred (i.e. a foreign key
 constraint was violated). If no error occurs, you want to call `commit()`.
-There are some situations when you execute multiple queries "at the same time"
-and you want to commit all of them if and only if they succeed. This allows
-you to avoid nesting these queries, queue them up, queue up COMMIT, and
-execute `rollback()` only if an error occurs.
+Rather than nesting all of these queries to determine whether or not to
+call `commit()` or `rollback()`, you can simply queue up all of your queries,
+call `commit()` to queue it up, and execute `rollback()` if your query
+callbacks if an error occurs.
+
+#### Important Note!
 
 If you do not call `commit()` or `rollback()` and the Queue has completed
 execution, `commit()` will be called automatically; however, one should
@@ -133,8 +152,11 @@ transaction.
 
 Available only if this Queue was created with `client.startTransaction`.
 This executes 'ROLLBACK' immediately and purges the remaining queries in the
-queue. You should call either `commit()` or `rollback()` exactly once. Once
-you call `rollback()` on this Queue, you should discard it.
+queue.
+
+You may only call `rollback()` once. To avoid calling it twice, you can
+check the `Queue.rolledback` flag to see if the transaction has already
+been rolled back.
 
 Note: Before 0.2.3, `rollback()` would add the 'ROLLBACK' query to the Queue
 and the Queue would continue executing. This was changed in 0.2.3 because it
@@ -142,6 +164,34 @@ is more natural for a ROLLBACK operation to abort the remaining Queue, since
 it will be rolled back anyway. As mentioned above, this also allows you to
 queue the COMMIT query at the bottom of the queue, and if an error occurs
 before the COMMIT, you can safely `rollback()` the entire transaction.
+
+#### Queue.rolledback
+
+Set to `true` if and only if `rollback()` has been called on this Queue.
+If `rollback()` has not be called, the value will be non-true (undefined,
+false, etc.).
+
+#### Queue.pause([maxWaitDuration])
+
+Pauses the Queue, preventing it from returning control to the next Queue or
+to the main node-mysql Queue. You can call `resume()` to resume the Queue,
+or if the Queue is a transaction, `commit()` or `rollback()` will
+automatically resume the Queue.
+
+By default, the Queue will remain paused until you call `resume()`; however
+you may set an optional maximum wait duration, which will prevent the Queue
+from pausing for too long.
+
+*CAUTION:* A paused Queue will block all queries for this connection.
+Use with care.
+
+Pausing a Queue is useful to make additional asynchronous calls within a
+query callback. An example of this is shown below.
+
+#### Queue.resume
+
+Resumes Queue execution. This function basically unpauses the Queue and
+calls `execute()`
 
 ### require('mysql-queues')(client, debug)
 
@@ -173,8 +223,10 @@ trans.query("INSERT ...", [...], function(err, info) {
 In the case above, an asynchronous call was placed in the query callback.
 This won't work as expected. The query callback completes and automatically
 executes `commit()` before the asychronous filesystem call completes. In this
-example, you will get a warning message, but that's it! The problem will run
-normally otherwise, but the expected behavior will not produced.
+example, you will get a warning message, your transaction will be committed
+no matter what, and your program may throw an exception after the I/O
+operation completes (because neither `commit()` or `rollback()` can be
+called more than once).
 
 To be clear, this problem is limited by aynchronous file I/O operations; even
 a query to another database will cause this problem (i.e. if you execute a
@@ -184,10 +236,4 @@ Possible workarounds include:
  - Using synchronous I/O operations (i.e. readFileSync in this case)
  - Performing your asynchronous operation BEFORE you execute any queued
  queries.
-
-Limitations:
- - As far as I know, you can't use mysql-queues to run a MySQL query, run a
- Redis command, and then `commit()` if and only if neither return an error.
- I may add a `pause()` method, which will pause a Queue and all queries until
- `resume()` is called. This would allow you to `pause()` right before the
- Redis command and `resume()` when the Redis command is completed.
+ - Call `Queue.pause()` right before the asynchrous operation
