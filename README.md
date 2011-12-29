@@ -101,6 +101,7 @@ support for transactions and more.
 See the source code for further documentation.
 
 Calling `execute()` on an already executing Queue has no effect.
+Calling `execute()` on a paused Queue has no effect. (see `pause()` below)
 
 Note: Once `execute()` is called and all queries have completed, the Queue
 will be empty again, returning control to either: (a) another Queue that has been
