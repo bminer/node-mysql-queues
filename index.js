@@ -32,7 +32,7 @@ module.exports = function(db, debug) {
 		}, debug);
 	}
 	db.startTransaction = function() {
-		return Queue.isNowTransaction(this.createQueue() );
+		return Queue.isNowTransaction(this.createQueue(), function() {return dbQuery.apply(db, arguments);});
 	}
 }
 function Queue(dbQuery, resumeMainQueue, debug) {
@@ -107,6 +107,7 @@ function Queue(dbQuery, resumeMainQueue, debug) {
 						throw e;
 					}
 				})(that.queue[i]);
+				if(that.queue.length == 0) return; //A rollback must have occurred!
 			}
 			that.queue = [];
 			//All queued queries are running, but we don't resume the main queue just yet
@@ -115,16 +116,16 @@ function Queue(dbQuery, resumeMainQueue, debug) {
 		return this; //Chaining :)
 	};
 }
-Queue.isNowTransaction = function(q) {
+Queue.isNowTransaction = function(q, dbQuery) {
 	q.query("START TRANSACTION");
 	q.commit = function(cb) {
 		this.query("COMMIT", cb);
 		delete this.commit;
-		delete this.rollback;
 		this.execute();
 	}
 	q.rollback = function(cb) {
-		this.query("ROLLBACK", cb);
+		this.queue = [];
+		dbQuery("ROLLBACK", cb);
 		delete this.commit;
 		delete this.rollback;
 		this.execute();
