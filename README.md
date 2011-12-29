@@ -53,7 +53,7 @@ client.query("SELECT ...") //This won't execute until the transaction is COMPLET
 //Or... as of version 0.3.0, you can do this...
 var trans = client.startTransaction();
 function error(err) {
-	if(err) {trans.rollback(); throw err;}
+	if(err && !trans.rolledback) {trans.rollback(); throw err;}
 }
 trans.query("DELETE...", [x], error);
 for(var i = 0; i < n; i++)
