@@ -149,10 +149,10 @@ query callbacks if an error occurs.
 ### Important Note!
 
 If you do not call `commit()` or `rollback()` and the Queue has completed
-execution, `commit()` will be called automatically; however, one should
-**NOT** rely on this behavior. In fact, mysql-queues will print nasty
-warning messages if you do not explicitly `commit()` or `rollback()` a
-transaction.
+execution, `commit()` will be called automatically to end the transaction;
+however, one should **NOT** rely on this behavior. In fact, mysql-queues
+will print nasty warning messages if you do not explicitly `commit()` or
+`rollback()` a transaction.
 
 #### Queue.rollback()
 
@@ -236,12 +236,21 @@ series of MySQL queries and then update Redis, for example)
 
 ### Fortunately, there are a few solutions...
 
-Possible solutions include:
+Possible solutions include: (in order of personal preference)
 
- * Using synchronous I/O operations (i.e. readFileSync in this case)
  * Performing your asynchronous operation BEFORE you execute any queued
  queries (i.e. we could have read "foobar.txt" first, then executed the query.
+ I understand... most of the time, this is not possible.
  * Call `Queue.pause()` right before the asynchrous operation. This is the
- easy way out, but it comes at a cost. If you pause a Queue, no query
- can be executed during the asynchronous operation. In other words, if
- you can avoid `Queue.pause()`, you should do so.
+ easy way out, but it comes at a slight cost. If you pause a Queue, no query
+ can be executed during the asynchronous operation. So, for scalability
+ reasons, be sure that your asynchronous operation runs quickly (i.e. a Redis
+ command or something).
+ * Using synchronous I/O operations (i.e. readFileSync in this case). This
+ is "just as bad" as calling `Queue.pause()` because the query execution is
+ paused during the synchronous operation, which will take just as long.
+
+And finally, to be clear, you are allowed to do asynchronous calls within the
+query callback of a transaction. You just need to `commit()` or `rollback()`
+or `pause()` beforehand because the Queue will be empty by the time the
+asynchronous operation completes.
