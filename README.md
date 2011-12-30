@@ -73,12 +73,12 @@ Even multiple Queues work! They get executed in the order that `execute()` is ca
 		* Place me on the main queue to be executed
 	* Otherwise, Execute me now
 		* Run all queries in the Queue in order
-		* Wait for all query callbacks to complete
-			* If the callback added more queries to this Queue, then jump to "Execute me now"
-			* Otherwise
-				* If this Queue is a transaction that has not been committed
-					* Commit it now and issue a warning message.
-				* Then, Return control to the main queue by executing all queued queries
+		* Wait for all query callbacks to complete. When they all complete, continue.
+		* If the callback added more queries to this Queue, then jump to "Execute me now"
+		* Otherwise
+			* If this Queue is a transaction that has not been committed, then
+			commit it now and issue a warning message.
+			* Finally, Return control to the main queue by executing all queued queries
 
 ## API
 
