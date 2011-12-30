@@ -66,6 +66,20 @@ was not required. */
 ```
 Even multiple Queues work! They get executed in the order that `execute()` is called.
 
+## How it works
+
+* If I'm a client.query() call or a Queue.execute() call...
+	* If a Queue is currently executing
+		* Place me on the main queue to be executed
+	* Execute me now
+		* Run all queries in the Queue in order
+		* Wait for all query callbacks to complete
+			* If the callback added more queries to this Queue, then jump to "Execute me now"
+			* Otherwise
+				* If this Queue is a transaction that has not been committed
+					* Commit it now and issue a warning message.
+				* Return control to the main queue by executing all queued queries
+
 ## API
 
 #### client.query(sql, [params, cb])
