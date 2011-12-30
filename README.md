@@ -234,7 +234,9 @@ file I/O operations; any asychronous call can cause this problem - even a
 query to another database will cause this problem (i.e. if you execute a
 series of MySQL queries and then update Redis, for example)
 
-Possible workarounds include:
+### Fortunately, there are a few solutions...
+
+Possible solutions include:
 
  * Using synchronous I/O operations (i.e. readFileSync in this case)
  * Performing your asynchronous operation BEFORE you execute any queued
