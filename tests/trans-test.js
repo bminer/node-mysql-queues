@@ -18,50 +18,41 @@ var db = {
 };
 
 queue(db); //Enable queuing
+//test1();
+//test2();
+test3();
 
-//An example of what NOT to do
-if(false)
-{
-	var trans = db.startTransaction();
-	trans.query("INSERT", function() {
-		//Emulate an async operation
-		setTimeout(function() {
-			//You can't use trans here!
-			if(false)
-				trans.commit();
-			else
-				trans.rollback();
-		}, 1500);
-	}).execute();
-}
-
-//Let's try this... using pause()
-/*var trans = db.startTransaction();
+function test1() {
+//Let's use an async call in the query callback...
+var trans = db.startTransaction();
 db.query("START");
 trans.query("INSERT", function() {
 	//Emulate an async operation
-	trans.pause();
+	trans.pause(); //try with and without pause() to see the effect
 	setTimeout(function() {
 		try {
 		//You can't use trans here!
 		if(Math.random() > 0.5)
 		{
-			console.log("Commit");
+			console.log("About to Commit");
 			trans.commit(); //implicit resume
 		}
 		else
 		{
-			console.log("Rollback");
+			console.log("About to Rollback");
 			trans.rollback();
 		}
 		} catch(e) {console.log(e)}
-	}, 2000);
+	}, 20);
 }).execute();
-db.query("FINALLY");*/
+db.query("FINALLY");
+}
 
+function test2() {
+//Let's try another example, without nesting...
 var trans2 = db.startTransaction();
 function error() {
-	if(!trans2.rolledback)
+	if(trans2.rollback)
 	{
 		console.log("Print once");
 		trans2.rollback();
@@ -69,4 +60,24 @@ function error() {
 }
 trans2.query("1", error);
 trans2.query("2", error);
-trans2.commit();
+//Note that trans2.execute().commit() is different from trans2.commit()
+trans2.commit(); //In this case, COMMIT is queued, not executed immediately
+}
+
+function test3() {
+	var trans = db.startTransaction();
+	function error() {
+		if(trans.rollback && Math.random() > 0.5)
+			trans.rollback();
+	}
+	trans.query("INSERT", function(err, info) {
+		if(err) error();
+		else
+		{
+			trans.query("UPDATE 1", error);
+			trans.query("UPDATE 2", error);
+			trans.commit();
+		}
+	}).execute();
+	db.query("FINALLY");
+}

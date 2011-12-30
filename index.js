@@ -16,16 +16,16 @@ module.exports = function(db, debug) {
 	//Create a new executable query Queue
 	db.createQueue = function() {
 		return new Queue(function() {return dbQuery.apply(db, arguments);},	function () {
-			console.log("Resume main queue");
 			//If the current Queue is a transaction that has not yet been committed, commit it
 			var ceq = currentlyExecutingQueue;
 			if(ceq != null && ceq.commit != null)
 			{
 				//Also, warn the user that relying on this behavior is a bad idea
-				console.warn("WARNING: mysql-queues: Database transaction was " +
-					"implicitly committed.\nIt is HIGHLY recommended that you " +
-					"explicitly commit all transactions.\n" +
-					"The last query to run was:", ceq.lastExecuted.sql);
+				if(ceq._autoCommit !== true)
+					console.warn("WARNING: mysql-queues: Database transaction was " +
+						"implicitly committed.\nIt is HIGHLY recommended that you " +
+						"explicitly commit all transactions.\n" +
+						"The last query to run was:", ceq.lastExecuted.sql);
 				ceq.commit();
 				return;
 			}
@@ -144,14 +144,17 @@ function Queue(dbQuery, resumeMainQueue, debug) {
 Queue.isNowTransaction = function(q, dbQuery) {
 	q.query("START TRANSACTION");
 	q.commit = function(cb) {
-		delete this.commit;
 		if(this.queue.length > 0)
 		{
-			this.resume(); //Execute the Queue to empty it
-			this.query("COMMIT", cb); //Queue COMMIT, but don't execute yet
+			this._autoCommit = true;
+			this.resume();
 		}
 		else
+		{
+			delete this.commit;
+			delete this._autoCommit;
 			this.query("COMMIT", cb).resume();
+		}
 	}
 	q.rollback = function(cb) {
 		this.queue = [];

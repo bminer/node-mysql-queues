@@ -118,14 +118,14 @@ Available only if this Queue was created with `client.startTransaction`.
 As of version 0.3.0, the behavior of `commit()` is:
 
  * If the queue is empty when `commit()` is called, then 'COMMIT' will be
- executed immediately, even if the Queue is paused.
+ queued to be excuted immediately, and the Queue will be resumed.
  * If the queue is not empty when `commit()` is called, then Queue will be
- resumed / executed. Then, 'COMMIT' will be queued for execution.
+ resumed. Then, 'COMMIT' will be queued for execution.
 
 You may only call `commit()` once. Once you call `commit()` on this Queue,
 you should discard it. To avoid calling `commit()` twice, you can check
-to see if it exists; once you call `commit()`, the function is deleted
-from the Queue object.
+to see if it exists; once you call `commit()`, in most circumstances, the
+function is deleted from the Queue object after it is called.
 
 As of version 0.3.0, it is sometimes
 possible to call `rollback()` even after `commit()` has been called.
@@ -156,7 +156,8 @@ queue.
 
 You may only call `rollback()` once. To avoid calling it twice, you can
 check to see if it exists; once you call `rollback()`, the function is
-deleted from the Queue object.
+deleted from the Queue object. Also, once you call `rollback()`, you cannot
+call `commit()`.
 
 Note: Before 0.2.3, `rollback()` would add the 'ROLLBACK' query to the Queue
 and the Queue would continue executing. This was changed in 0.2.3 because it
