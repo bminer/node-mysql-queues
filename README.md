@@ -118,9 +118,14 @@ Available only if this Queue was created with `client.startTransaction`.
 As of version 0.3.0, the behavior of `commit()` is:
 
  * If the queue is empty when `commit()` is called, then 'COMMIT' will be
- queued to be excuted immediately, and the Queue will be resumed.
- * If the queue is not empty when `commit()` is called, then Queue will be
- resumed. Then, 'COMMIT' will be queued for execution.
+ queued to be excuted immediately. If this behavior is desired, and you
+ are not sure if the queue will be empty, simply call `resume()`
+ before calling `commit()`.
+ * If the queue is not empty when `commit()` is called, then 'COMMIT' will
+ be queued for execution when the queue is empty and all query callbacks
+ have completed.
+
+Calling `commit()` also implicitly calls `resume()` on the Queue.
 
 You may only call `commit()` once. Once you call `commit()` on this Queue,
 you should discard it. To avoid calling `commit()` twice, you can check
@@ -131,7 +136,8 @@ As of version 0.3.0, it is sometimes
 possible to call `rollback()` even after `commit()` has been called.
 If 'COMMIT' is queued for execution (i.e. if the queue is *not* empty when
 `commit()` is called), then you may call `rollback()` on this Queue,
-as long as `rollback()` occurs before the 'COMMIT' is executed.
+as long as `rollback()` occurs before the 'COMMIT' is executed (i.e. when the
+Queue is empty and all query callbacks have completed).
 You might use the functionality in a scenario where you only want your query
 callbacks to call `rollback()` if an error occurred (i.e. a foreign key
 constraint was violated). If no error occurs, you want to call `commit()`.
