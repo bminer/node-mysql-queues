@@ -239,16 +239,17 @@ series of MySQL queries and then update Redis, for example)
 Possible solutions include: (in order of personal preference)
 
  * Performing your asynchronous operation BEFORE you execute any queued
- queries (i.e. we could have read "foobar.txt" first, then executed the query.
+ queries (i.e. we could have read "foobar.txt" first, then executed the query).
  I understand... most of the time, this is not possible.
  * Call `Queue.pause()` right before the asynchrous operation. This is the
- easy way out, but it comes at a slight cost. If you pause a Queue, no query
+ easy way out, but it comes at a small cost. If you pause a Queue, no query
  can be executed during the asynchronous operation. So, for scalability
  reasons, be sure that your asynchronous operation runs quickly (i.e. a Redis
- command or something).
- * Using synchronous I/O operations (i.e. readFileSync in this case). This
+ command or something). Don't do any video encoding on a 1 GB file.
+ * Use synchronous I/O operations (i.e. readFileSync in this case). This
  is "just as bad" as calling `Queue.pause()` because the query execution is
  paused during the synchronous operation, which will take just as long.
+ But, this works, too.
 
 And finally, to be clear, you are allowed to do asynchronous calls within the
 query callback of a transaction. You just need to `commit()` or `rollback()`
