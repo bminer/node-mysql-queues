@@ -4,8 +4,6 @@ Add your own node-mysql query queues to support transactions and multiple statem
 
 For use with Node.JS and node-mysql: https://github.com/felixge/node-mysql
 
-Please note that the 0.2.3 release is buggy and is not recommended for use.
-
 ## Install
 
 `npm install mysql-queues`
@@ -269,3 +267,9 @@ And finally, to be clear, you are allowed to do asynchronous calls within the
 query callback of a transaction. You just need to `commit()` or `rollback()`
 or `pause()` beforehand because the Queue will be empty by the time the
 asynchronous operation completes.
+
+## Questions / Comments / Bugs
+
+Please feel free to contact me via GitHub, send pull requests, open issues, etc.
+
+I am open to suggestions and criticisms.
