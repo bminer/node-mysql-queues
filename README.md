@@ -80,26 +80,26 @@ Even multiple Queues work! They get executed in the order that `execute()` is ca
 
 ## API
 
-#### client.query(sql, [params, cb])
+### client.query(sql, [params, cb])
 
 Use normally. Same as node-mysql, except that if a Queue is still pending
 completion, this query may be queued for later execution.
 
-#### client.createQueue()
+### client.createQueue()
 
 Creates a new query Queue.
 
-#### client.startTransaction()
+### client.startTransaction()
 
 Creates a new query Queue with "START TRANSACTION" as the first queued query.
 The Queue object will also have `commit()` and `rollback()` methods.
 
-#### Queue.query(sql, [params, cb])
+### Queue.query(sql, [params, cb])
 
 Same as node-mysql. This query will be queued for execution until `execute()`
 is called on the `Queue`.
 
-#### Queue.execute()
+### Queue.execute()
 
 Executes all queries that were queued using `Queue.query`. Until all query
 *callbacks* complete, it is guaranteed that all queries in this Queue
@@ -123,7 +123,7 @@ continue to use `Queue.query` and `Queue.execute` to queue and execute more
 queries; however, as noted below, you should *never* reuse a Queue created by
 `client.startTransaction`
 
-#### Queue.commit()
+### Queue.commit()
 
 Available only if this Queue was created with `client.startTransaction`.
 
@@ -166,7 +166,7 @@ however, one should **NOT** rely on this behavior. In fact, mysql-queues
 will print nasty warning messages if you do not explicitly `commit()` or
 `rollback()` a transaction.
 
-#### Queue.rollback()
+### Queue.rollback()
 
 Available only if this Queue was created with `client.startTransaction`.
 This executes 'ROLLBACK' immediately and purges the remaining queries in the
@@ -184,7 +184,7 @@ it will be rolled back anyway. As mentioned above, this also allows you to
 queue the COMMIT query at the bottom of the queue, and if an error occurs
 before the COMMIT, you can safely `rollback()` the entire transaction.
 
-#### Queue.pause([maxWaitDuration])
+### Queue.pause([maxWaitDuration])
 
 Pauses the Queue, preventing it from returning control to the next Queue or
 to the main node-mysql Queue. You can call `resume()` to resume the Queue,
@@ -201,7 +201,7 @@ which will prevent the Queue from pausing for too long.
 Pausing a Queue is useful to make additional asynchronous calls within a
 query callback. An example of this is shown below.
 
-#### Queue.resume()
+### Queue.resume()
 
 Resumes Queue execution. This function basically unpauses the Queue and
 calls `execute()`.
