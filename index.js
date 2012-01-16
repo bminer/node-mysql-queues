@@ -26,7 +26,7 @@ module.exports = function(db, debug) {
 						"implicitly committed.\nIt is HIGHLY recommended that you " +
 						"explicitly commit all transactions.\n" +
 						"The last query to run was:", ceq.lastExecuted.sql);
-				ceq.commit();
+				ceq.commit(ceq._autoCommitCB);
 				return;
 			}
 			currentlyExecutingQueue = null;
@@ -147,6 +147,7 @@ Queue.isNowTransaction = function(q, dbQuery) {
 		if(this.queue.length > 0)
 		{
 			this._autoCommit = true;
+			this._autoCommitCB = cb;
 			this.resume();
 		}
 		else
