@@ -1,23 +1,23 @@
-var currentlyExecutingQueue = null;
-var mainQueue = [];
 /* Wraps db.query and exposes function db.createQueue() */
 module.exports = function(db, debug) {
 	if(debug !== true) debug = false;
 	if(debug) console.log("mysql-queues: debug mode enabled.");
 	var dbQuery = db.query; //The old db.query function
+	db.queue_currentlyExecutingQueue = null;
+	db.queue_mainQueue = [];
 	//Wrap db.query
 	db.query = function(sql, params, cb) {
-		//Run query if no Queue is running; otherwise, queue it in mainQueue
-		if(currentlyExecutingQueue == null)
+		//Run query if no Queue is running; otherwise, queue it in db.queue_mainQueue
+		if(db.queue_currentlyExecutingQueue == null)
 			return dbQuery.apply(db, arguments);
 		else
-			mainQueue.push(arguments);
+			db.queue_mainQueue.push(arguments);
 	}
 	//Create a new executable query Queue
 	db.createQueue = function() {
 		return new Queue(function() {return dbQuery.apply(db, arguments);},	function () {
 			//If the current Queue is a transaction that has not yet been committed, commit it
-			var ceq = currentlyExecutingQueue;
+			var ceq = db.queue_currentlyExecutingQueue;
 			if(ceq != null && ceq.commit != null)
 			{
 				//Also, warn the user that relying on this behavior is a bad idea
@@ -29,11 +29,11 @@ module.exports = function(db, debug) {
 				ceq.commit(ceq._autoCommitCB);
 				return;
 			}
-			currentlyExecutingQueue = null;
+			db.queue_currentlyExecutingQueue = null;
 			//Called when a Queue has completed its processing and main queue should be executed
-			while(mainQueue.length > 0)
+			while(db.queue_mainQueue.length > 0)
 			{
-				var item = mainQueue.shift(); //Unsure of shift's performance
+				var item = db.queue_mainQueue.shift(); //Unsure of shift's performance
 				if(item instanceof Queue)
 				{
 					item.execute();
@@ -42,13 +42,13 @@ module.exports = function(db, debug) {
 				else
 					dbQuery.apply(db, item);
 			}
-		}, debug);
+		}, debug, db);
 	}
 	db.startTransaction = function() {
 		return Queue.isNowTransaction(this.createQueue(), function() {return dbQuery.apply(db, arguments);});
 	}
 }
-function Queue(dbQuery, resumeMainQueue, debug) {
+function Queue(dbQuery, resumeMainQueue, debug, db) {
 	this.queue = [];
 	this.paused = false;
 	/* Add a query to the Queue */
@@ -71,13 +71,13 @@ function Queue(dbQuery, resumeMainQueue, debug) {
 	this.execute = function() {
 		if(this.paused === true) return this;
 		var that = this;
-		//If another Queue is currently running, we put this on the mainQueue
-		if(currentlyExecutingQueue != null && currentlyExecutingQueue != this)
-			mainQueue.push(this);
+		//If another Queue is currently running, we put this on the db.queue_mainQueue
+		if(db.queue_currentlyExecutingQueue != null && db.queue_currentlyExecutingQueue != this)
+			db.queue_mainQueue.push(this);
 		else if(that.queue.length > 0)
 		{
-			currentlyExecutingQueue = this;
-			//console.log("Executing queue:", currentlyExecutingQueue);
+			db.queue_currentlyExecutingQueue = this;
+			//console.log("Executing queue:", db.queue_currentlyExecutingQueue);
 			//Run everything in the queue
 			var done = 0, total = that.queue.length;
 			for(var i in that.queue)
@@ -116,9 +116,9 @@ function Queue(dbQuery, resumeMainQueue, debug) {
 			}
 			that.queue = [];
 			//All queued queries are running, but we don't resume the main queue just yet
-			//console.log("Queue Complete:", currentlyExecutingQueue);
+			//console.log("Queue Complete:", db.queue_currentlyExecutingQueue);
 		}
-		else if(currentlyExecutingQueue == this)
+		else if(db.queue_currentlyExecutingQueue == this)
 			resumeMainQueue();
 		return this; //Chaining :)
 	};
