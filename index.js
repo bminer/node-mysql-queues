@@ -1,23 +1,22 @@
-var currentlyExecutingQueue = null;
-var mainQueue = [];
 /* Wraps db.query and exposes function db.createQueue() */
 module.exports = function(db, debug) {
 	if(debug !== true) debug = false;
 	if(debug) console.log("mysql-queues: debug mode enabled.");
+	var options = { debug: debug, currentlyExecutingQueue: null, mainQueue: [] };
 	var dbQuery = db.query; //The old db.query function
 	//Wrap db.query
 	db.query = function(sql, params, cb) {
 		//Run query if no Queue is running; otherwise, queue it in mainQueue
-		if(currentlyExecutingQueue == null)
+		if(options.currentlyExecutingQueue == null)
 			return dbQuery.apply(db, arguments);
 		else
-			mainQueue.push(arguments);
+			options.mainQueue.push(arguments);
 	}
 	//Create a new executable query Queue
 	db.createQueue = function() {
 		return new Queue(function() {return dbQuery.apply(db, arguments);},	function () {
 			//If the current Queue is a transaction that has not yet been committed, commit it
-			var ceq = currentlyExecutingQueue;
+			var ceq = options.currentlyExecutingQueue;
 			if(ceq != null && ceq.commit != null)
 			{
 				//Also, warn the user that relying on this behavior is a bad idea
@@ -29,11 +28,11 @@ module.exports = function(db, debug) {
 				ceq.commit(ceq._autoCommitCB);
 				return;
 			}
-			currentlyExecutingQueue = null;
+			options.currentlyExecutingQueue = null;
 			//Called when a Queue has completed its processing and main queue should be executed
-			while(mainQueue.length > 0)
+			while(options.mainQueue.length > 0)
 			{
-				var item = mainQueue.shift(); //Unsure of shift's performance
+				var item = options.mainQueue.shift(); //Unsure of shift's performance
 				if(item instanceof Queue)
 				{
 					item.execute();
@@ -42,13 +41,13 @@ module.exports = function(db, debug) {
 				else
 					dbQuery.apply(db, item);
 			}
-		}, debug);
+		}, options);
 	}
 	db.startTransaction = function() {
 		return Queue.isNowTransaction(this.createQueue(), function() {return dbQuery.apply(db, arguments);});
 	}
 }
-function Queue(dbQuery, resumeMainQueue, debug) {
+function Queue(dbQuery, resumeMainQueue, options) {
 	this.queue = [];
 	this.paused = false;
 	/* Add a query to the Queue */
@@ -72,12 +71,12 @@ function Queue(dbQuery, resumeMainQueue, debug) {
 		if(this.paused === true) return this;
 		var that = this;
 		//If another Queue is currently running, we put this on the mainQueue
-		if(currentlyExecutingQueue != null && currentlyExecutingQueue != this)
-			mainQueue.push(this);
+		if(options.currentlyExecutingQueue != null && options.currentlyExecutingQueue != this)
+			options.mainQueue.push(this);
 		else if(that.queue.length > 0)
 		{
-			currentlyExecutingQueue = this;
-			//console.log("Executing queue:", currentlyExecutingQueue);
+			options.currentlyExecutingQueue = this;
+			//console.log("Executing queue:", options.currentlyExecutingQueue);
 			//Run everything in the queue
 			var done = 0, total = that.queue.length;
 			for(var i in that.queue)
@@ -88,7 +87,7 @@ function Queue(dbQuery, resumeMainQueue, debug) {
 						if(item.sql == "COMMIT") delete that.rollback; //Keep 'em honest
 						that.lastExecuted = item; //For debugging and convenience
 						dbQuery(item.sql, item.params || [], function() {
-							if(debug && arguments[0] != null)
+							if(options.debug && arguments[0] != null)
 								console.error("mysql-queues: An error occurred while executing the following " +
 									"query:\n\t", item.sql);
 							//Execute the original callback first (which may add more queries to this Queue)
@@ -107,7 +106,7 @@ function Queue(dbQuery, resumeMainQueue, debug) {
 							}
 						});
 					} catch(e) {
-						if(debug)
+						if(options.debug)
 							console.log("mysql-queues: An exception occurred for this query:\n\t",
 								item.sql, "\twith parameters:\n\t", item.params);
 						throw e;
@@ -116,9 +115,9 @@ function Queue(dbQuery, resumeMainQueue, debug) {
 			}
 			that.queue = [];
 			//All queued queries are running, but we don't resume the main queue just yet
-			//console.log("Queue Complete:", currentlyExecutingQueue);
+			//console.log("Queue Complete:", options.currentlyExecutingQueue);
 		}
-		else if(currentlyExecutingQueue == this)
+		else if(options.currentlyExecutingQueue == this)
 			resumeMainQueue();
 		return this; //Chaining :)
 	};
