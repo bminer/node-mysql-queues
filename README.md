@@ -56,7 +56,7 @@ function error(err) {
 trans.query("DELETE...", [x], error);
 for(var i = 0; i < n; i++)
 	trans.query("INSERT...", [ y[i] ], error);
-trans.commit();
+trans.commit(); //Implictly calls resume(), which calls execute()
 /* In the case written above, COMMIT is placed at the end of the Queue, yet the
 entire transaction can be rolled back if an error occurs. Nesting these queries
 was not required. */
