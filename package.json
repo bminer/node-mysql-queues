@@ -6,10 +6,11 @@
   "homepage": "https://github.com/bminer/node-mysql-queues",
   "repository": {
     "type": "git",
-    "url": "git://github.com/bminer/node-mysql-queues.git"
+    "url": "git://github.com/myndzi/node-mysql-queues.git"
   },
   "contributors": [
-  	"Tom Atkinson <atkinson.tommy@neosoft.ba>"
+  	"Tom Atkinson <atkinson.tommy@neosoft.ba>",
+	"Kris Reeves <krisreeves@searchfanatics.com>"
   ],
   "main": "index.js",
   "engines": {
@@ -19,7 +20,7 @@
   	"mysql": ">=0.9.5"
   },
   "bugs": {
-  	"url": "https://github.com/bminer/node-mysql-queues/issues"
+  	"url": "https://github.com/myndzi/node-mysql-queues/issues"
   },
   "devDependencies": {},
   "keywords": [
