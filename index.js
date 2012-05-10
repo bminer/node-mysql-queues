@@ -68,7 +68,7 @@ function Queue(dbQuery, resumeMainQueue, options) {
 		all queries have been completed.
 	*/
 	this.execute = function() {
-		if(this.paused === true) return this;
+		if(this.paused === true || this.executing) return;
 		var that = this;
 		//If another Queue is currently running, we put this on the mainQueue
 		if(options.currentlyExecutingQueue != null && options.currentlyExecutingQueue != this)
@@ -78,6 +78,7 @@ function Queue(dbQuery, resumeMainQueue, options) {
 			options.currentlyExecutingQueue = this;
 			//console.log("Executing queue:", options.currentlyExecutingQueue);
 			//Run everything in the queue
+			that.executing = true;
 			var done = 0, total = that.queue.length;
 			for(var i in that.queue)
 			{
@@ -96,6 +97,7 @@ function Queue(dbQuery, resumeMainQueue, options) {
 							//When the entire queue has completed...
 							if(++done == total)
 							{
+								that.executing = false;
 								if(that.paused === true) return;
 								/* The query's callback may have queued more queries on this Queue.
 									If so, execute this Queue again; otherwise, resumeMainQueue() */
