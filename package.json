@@ -9,7 +9,8 @@
     "url": "git://github.com/bminer/node-mysql-queues.git"
   },
   "contributors": [
-  	"Tom Atkinson <atkinson.tommy@neosoft.ba>"
+  	"Tom Atkinson <atkinson.tommy@neosoft.ba>",
+  	"Kris Reeves <krisreeves@searchfanatics.com>"
   ],
   "main": "index.js",
   "engines": {
