@@ -1,0 +1,56 @@
+Executing 1
+Executing 2
+Executing 3A
+Executing 3B
+Executing Q1 1
+Executing Q1 2
+Executing Q1 3
+-------------1 CB
+-------------2 CB
+-------------3A CB
+-------------3B CB
+-------------Q1 1 CB
+-------------Q1 2 CB
+-------------Q1 3 CB
+Executing Q1 2cb 1
+Executing Q1 2cb 2
+-------------Q1 2cb 1 CB
+-------------Q1 2cb 2 CB
+Executing Q1 2cb 2cb
+-------------Q1 2cb 2cb CB
+Executing 4
+Executing Q2 1
+Executing Q2 2
+Executing Q2 3
+-------------4 CB
+-------------Q2 1 CB
+-------------Q2 2 CB
+-------------Q2 3 CB
+Executing Q2 2cb 1
+Executing Q2 2cb 2
+-------------Q2 2cb 1 CB
+-------------Q2 2cb 2 CB
+Executing Q2 2cb 2cb
+-------------Q2 2cb 2cb CB
+Executing 5
+Executing 2cb 1
+Executing 2cb 2
+Executing 6
+Executing 7
+-------------5 CB
+-------------2cb 1 CB
+-------------2cb 2 CB
+Executing 2cb 2cb
+-------------6 CB
+Executing 8
+Executing 9
+-------------7 CB
+-------------2cb 2cb CB
+-------------8 CB
+-------------9 CB
+Executing 10
+Executing 11
+-------------10 CB
+-------------11 CB
+Executing 12
+-------------12 CB
