@@ -123,9 +123,10 @@ continue to use `Queue.query` and `Queue.execute` to queue and execute more
 queries; however, as noted below, you should *never* reuse a Queue created by
 `client.startTransaction`
 
-### Queue.commit()
+### Queue.commit(cb)
 
 Available only if this Queue was created with `client.startTransaction`.
+Calls `cb(err, info)` when the COMMIT has completed.
 
 As of version 0.3.0, the behavior of `commit()` is:
 
@@ -169,8 +170,9 @@ will print nasty warning messages if you do not explicitly `commit()` or
 ### Queue.rollback()
 
 Available only if this Queue was created with `client.startTransaction`.
-This executes 'ROLLBACK' immediately and purges the remaining queries in the
-queue.
+This executes 'ROLLBACK' immediately, purges the remaining queries in the
+queue, and immediately returns control to the main queue. Finally, the
+callback `cb(err, info)` is called when the ROLLBACK has completed.
 
 You may only call `rollback()` once. To avoid calling it twice, you can
 check to see if it exists; once you call `rollback()`, the function is
