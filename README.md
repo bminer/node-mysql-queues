@@ -2,7 +2,36 @@
 
 Add your own node-mysql query queues to support transactions and multiple statements.
 
-For use with Node.JS and node-mysql: https://github.com/felixge/node-mysql
+For use with Node.js and node-mysql: https://github.com/felixge/node-mysql
+
+## Background
+
+node-mysql does not provide an API for MySQL transactions (yet).
+
+There are a few problems with this:
+
+- If you use the same database connection for 2 or more requests, then you can run
+	into an issue where queries that should not intermix, end up intermixing.
+	This can mess up MySQL transactions.
+- There is no nice API to start, commit, or rollback transactions.
+
+Fortunately, there are a few solutions:
+
+- The easy solution: create a new connection to the database for each request, or
+	to be extra safe, create a new connection for each transaction.  This is
+	probably what PHP does.  Unfortunately, a new connection for each request
+	can get expensive and slightly harm performance.
+- The other solution: node-mysql-queues.  The idea behind node-mysql-queues is
+	that we create separate query queues to ensure that queries in a particular
+	queue do not overlap with queries in another queue; that is, they get executed
+	in order, as expected. Plus, you have a nice, simple API for MySQL
+	transactions. The disadvantage is that other requests with DB queries need
+	to block while a transaction is executed, but I'm not sure about the effect
+	on performance here.
+
+All that being said, this project is still being actively maintained.  It has *NOT*
+been tested with node-mysql 2.0, so if you upgrade to 2.0, please shoot me an email
+with your comments.
 
 ## Install
 
