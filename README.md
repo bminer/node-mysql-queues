@@ -160,7 +160,7 @@ Calls `cb(err, info)` when the COMMIT has completed.
 As of version 0.3.0, the behavior of `commit()` is:
 
  * If the queue is empty when `commit()` is called, then 'COMMIT' will be
- queued to be excuted immediately. If this behavior is desired, and you
+ queued to be executed immediately. If this behavior is desired, and you
  are not sure if the queue will be empty, simply call `resume()`
  before calling `commit()`.
  * If the queue is not empty when `commit()` is called, then 'COMMIT' will
