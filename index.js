@@ -80,7 +80,7 @@ function Queue(dbQuery, resumeMainQueue, options) {
 			//Run everything in the queue
 			that.executing = true;
 			var done = 0, total = that.queue.length;
-			for(var i in that.queue)
+			for(var i = 0; i < total; i ++)
 			{
 				(function(item) {
 					//Execute the query
