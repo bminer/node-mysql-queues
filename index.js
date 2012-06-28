@@ -16,7 +16,7 @@ module.exports = function(db, debug) {
 	db.createQueue = function() {
 		return new Queue(function() {return dbQuery.apply(db, arguments);},	function () {
 			//If the current Queue is a transaction that has not yet been committed, commit it
-			var ceq = options.currentlyExecutingQueue;
+			var ceq = options.currentlyExecutingQueue, item;
 			if(ceq != null && ceq.commit != null)
 			{
 				//Also, warn the user that relying on this behavior is a bad idea
@@ -32,7 +32,7 @@ module.exports = function(db, debug) {
 			//Called when a Queue has completed its processing and main queue should be executed
 			while(options.mainQueue.length > 0)
 			{
-				var item = options.mainQueue.shift(); //Unsure of shift's performance
+				item = options.mainQueue.shift(); //Unsure of shift's performance
 				if(item instanceof Queue)
 				{
 					item.execute();
