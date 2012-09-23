@@ -29,9 +29,8 @@ Fortunately, there are a few solutions:
 	to block while a transaction is executed, but I'm not sure about the effect
 	on performance here.
 
-All that being said, this project is still being actively maintained.  It has *NOT*
-been tested with node-mysql 2.0, so if you upgrade to 2.0, please shoot me an email
-with your comments.
+All that being said, this project is still being actively maintained.  It has
+also been tested with node-mysql 2.0.
 
 ## Install
 
