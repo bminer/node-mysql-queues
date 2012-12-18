@@ -79,7 +79,7 @@ client.query("SELECT ...") //This won't execute until the transaction is COMPLET
 //Or... as of version 0.3.0, you can do this...
 var trans = client.startTransaction();
 function error(err) {
-	if(err && !trans.rolledback) {trans.rollback(); throw err;}
+	if(err && trans.rollback) {trans.rollback(); throw err;}
 }
 trans.query("DELETE...", [x], error);
 for(var i = 0; i < n; i++)
@@ -151,7 +151,7 @@ continue to use `Queue.query` and `Queue.execute` to queue and execute more
 queries; however, as noted below, you should *never* reuse a Queue created by
 `client.startTransaction`
 
-### Queue.commit(cb)
+### Queue.commit([cb])
 
 Available only if this Queue was created with `client.startTransaction`.
 Calls `cb(err, info)` when the COMMIT has completed.
@@ -195,7 +195,7 @@ however, one should **NOT** rely on this behavior. In fact, mysql-queues
 will print nasty warning messages if you do not explicitly `commit()` or
 `rollback()` a transaction.
 
-### Queue.rollback()
+### Queue.rollback([cb])
 
 Available only if this Queue was created with `client.startTransaction`.
 This executes 'ROLLBACK' immediately, purges the remaining queries in the
