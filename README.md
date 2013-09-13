@@ -40,7 +40,7 @@ also been tested with node-mysql 2.0.
 
 ```javascript
 var mysql = require('mysql');
-var client = mysql.createClient({
+var client = mysql.createConnection({ //Use `mysql.createClient` in older versions of node-mysql
 	user: 'root',
 	password: 'root'
 });
