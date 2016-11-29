@@ -4,9 +4,13 @@ Add your own node-mysql query queues to support transactions and multiple statem
 
 For use with Node.js and node-mysql: https://github.com/felixge/node-mysql
 
+## DEPRECATION NOTICE
+
+This library is now pointless because node-mysql supports transactions and connection pooling.  Thank you and goodbye.
+
 ## Background
 
-node-mysql does not provide an API for MySQL transactions (yet).
+~~node-mysql does not provide an API for MySQL transactions (yet).~~
 
 There are a few problems with this:
 
@@ -29,7 +33,7 @@ Fortunately, there are a few solutions:
 	to block while a transaction is executed, but I'm not sure about the effect
 	on performance here.
 
-All that being said, this project is still being actively maintained.  It has
+~~All that being said, this project is still being actively maintained.~~  It has
 also been tested with node-mysql 2.0.
 
 ## Install
